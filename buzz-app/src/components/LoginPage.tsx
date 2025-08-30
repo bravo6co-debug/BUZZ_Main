@@ -20,6 +20,8 @@ export default function LoginPage({ onLogin, onClose, showCloseButton = false, r
   const [name, setName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [emailConfirmationPending, setEmailConfirmationPending] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +35,14 @@ export default function LoginPage({ onLogin, onClose, showCloseButton = false, r
       const { data, error } = await signInWithEmail(email, password);
       
       if (error) {
-        toast.error(error.message || "로그인에 실패했습니다");
+        // Check if it's an email confirmation error
+        if (error.message === 'Email not confirmed') {
+          setEmailConfirmationPending(true);
+          setPendingEmail(email);
+          toast.error("이메일 인증이 필요합니다. 가입하신 이메일을 확인해주세요.");
+        } else {
+          toast.error(error.message || "로그인에 실패했습니다");
+        }
         console.error("Login error:", error);
       } else if (data?.user) {
         toast.success("로그인 성공!");
@@ -80,16 +89,17 @@ export default function LoginPage({ onLogin, onClose, showCloseButton = false, r
         toast.error(error.message || "회원가입에 실패했습니다");
         console.error("Signup error:", error);
       } else if (data?.user) {
+        // Set email confirmation pending state
+        setEmailConfirmationPending(true);
+        setPendingEmail(email);
+        
         // Clear stored referral code after successful signup
         if (referralCode) {
           localStorage.removeItem('referralCode');
-          toast.success("리퍼럴 가입 성공! 특별 혜택을 확인해보세요!");
+          toast.success("리퍼럴 가입 성공! 이메일을 확인하여 계정을 활성화해주세요.");
         } else {
-          toast.success("회원가입 성공! 이메일을 확인해주세요.");
+          toast.success("회원가입 성공! 이메일을 확인하여 계정을 활성화해주세요.");
         }
-        
-        // Auto-login after signup for better UX
-        onLogin();
       }
     } catch (error) {
       toast.error("회원가입 중 오류가 발생했습니다");
@@ -120,6 +130,27 @@ export default function LoginPage({ onLogin, onClose, showCloseButton = false, r
           <h1 className="text-3xl font-bold text-primary mb-2">BUZZ</h1>
           <p className="text-muted-foreground">지역 기반 모바일 서비스</p>
         </div>
+
+        {/* Email Confirmation Pending Notice */}
+        {emailConfirmationPending && (
+          <Card className="mb-4 border-yellow-400 bg-yellow-50">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">📧</span>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-yellow-900 mb-1">이메일 확인 필요</h3>
+                  <p className="text-sm text-yellow-800 mb-2">
+                    {pendingEmail}로 인증 메일을 발송했습니다.
+                  </p>
+                  <p className="text-xs text-yellow-700">
+                    이메일을 확인하여 계정을 활성화해주세요. 
+                    인증 완료 후 로그인이 가능합니다.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Login/Signup Form */}
         <Card>

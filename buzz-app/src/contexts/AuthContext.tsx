@@ -61,6 +61,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
+        // Check for email confirmation error
+        if (error.message === 'Email not confirmed') {
+          return { 
+            success: false, 
+            error: '이메일 인증이 필요합니다. 가입하신 이메일을 확인해주세요.',
+            needsEmailConfirmation: true
+          };
+        }
+        
         // Fallback to demo login
         if (email === 'test@test.com' && password === 'test123') {
           localStorage.setItem('buzz_logged_in', 'true');
