@@ -25,42 +25,60 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     setLoading(true);
 
     try {
-      // 이메일 형식으로 변환 (사업자번호@buzz.biz)
-      const email = `${businessNumber.replace(/-/g, '')}@buzz.biz`;
-      
-      // Supabase 인증 시도
-      const { data, error: authError } = await signInBusiness(email, password);
+      // 사업자번호 또는 이메일로 로그인
+      const { data, error: authError } = await signInBusiness(businessNumber, password);
       
       if (authError) {
-        // Supabase 인증 실패시 기존 API 시도
-        const response = await authApi.login(businessNumber, password);
-        if (response.success) {
+        console.error('Login error:', authError);
+        
+        // 비밀번호 오류 확인
+        if (authError.message?.includes('Invalid login credentials')) {
+          setError('사업자번호 또는 비밀번호가 올바르지 않습니다.');
+        } else {
+          setError('로그인에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        }
+        
+        // Mock login for development
+        if (businessNumber === '123-45-67890' && password === 'admin123') {
           localStorage.setItem('buzz_biz_logged_in', 'true');
+          localStorage.setItem('buzz_biz_business_info', JSON.stringify({
+            id: '1',
+            name: '카페 브라운',
+            businessNumber: '123-45-67890',
+            owner: '김사장',
+          }));
           onLogin();
         }
       } else if (data?.user) {
         // Supabase 인증 성공
         localStorage.setItem('buzz_biz_logged_in', 'true');
+        
         if (data.business) {
+          // 비즈니스 정보 저장
           localStorage.setItem('buzz_biz_business_info', JSON.stringify(data.business));
+          
+          // 첫 로그인 확인 (임시 비밀번호 사용 시)
+          const metadata = data.user.user_metadata;
+          if (metadata?.needs_password_change) {
+            setError('첫 로그인입니다. 보안을 위해 비밀번호를 변경해주세요.');
+            // TODO: 비밀번호 변경 화면으로 이동
+          }
+          
+          onLogin();
+        } else if (data.pendingApplication) {
+          // 승인 대기 중
+          if (data.pendingApplication.status === 'pending') {
+            setError('현재 가입 승인 대기 중입니다. 영업일 기준 1-2일 내 처리됩니다.');
+          } else if (data.pendingApplication.status === 'rejected') {
+            setError(`가입 승인이 거부되었습니다. 사유: ${data.pendingApplication.rejection_reason || '관리자에게 문의하세요'}`);
+          }
+        } else {
+          setError('비즈니스 정보를 찾을 수 없습니다. 관리자에게 문의하세요.');
         }
-        onLogin();
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err?.error?.message || '로그인에 실패했습니다.');
-      
-      // Mock login for development
-      if (businessNumber === '123-45-67890' && password === 'admin123') {
-        localStorage.setItem('buzz_biz_logged_in', 'true');
-        localStorage.setItem('buzz_biz_business_info', JSON.stringify({
-          id: '1',
-          name: '카페 브라운',
-          businessNumber: '123-45-67890',
-          owner: '김사장',
-        }));
-        onLogin();
-      }
+      setError('로그인 처리 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -152,8 +170,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 py-4 rounded-xl font-black text-xl hover:bg-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-[1.02] border-2 border-blue-500"
-                style={{color: '#000000', textShadow: '1px 1px 2px rgba(255,255,255,0.8)'}}
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-4 rounded-xl font-bold text-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
               >
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
@@ -166,10 +183,9 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             <div className="mt-6 text-center space-y-2">
               <button
                 onClick={() => setShowSignup(true)}
-                className="w-full bg-green-600 py-3 px-4 rounded-xl font-black text-lg hover:bg-green-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-[1.02] border-2 border-green-500"
-                style={{color: '#000000', textShadow: '1px 1px 2px rgba(255,255,255,0.8)'}}
+                className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 px-4 rounded-xl font-bold text-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] border-2 border-green-400"
               >
-                🏢 사업자 등록 신청하기
+                ✨ 간단 가입 신청 (30초 완료)
               </button>
               <p className="text-xs text-gray-500">
                 💡 관리자 승인 후 SMS로 비밀번호를 받으실 수 있습니다
@@ -265,40 +281,45 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-xl hover:bg-blue-700 transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center border-2 border-blue-500"
               >
                 {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-6 h-6 animate-spin text-white" />
                 ) : (
-                  '가입 신청'
+                  <span className="text-white font-bold">🚀 가입 신청하기</span>
                 )}
               </button>
 
               <button
                 type="button"
                 onClick={() => setShowSignup(false)}
-                className="w-full text-gray-600 py-2 text-sm"
+                className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors mt-2"
               >
-                로그인으로 돌아가기
+                ← 로그인으로 돌아가기
               </button>
             </form>
           </>
         )}
 
-        {/* 사업자 등록 버튼 */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600 mb-3 text-center">
-            아직 사업자 등록을 하지 않으셨나요?
-          </p>
-          <button
-            type="button"
-            onClick={() => setShowRegistration(true)}
-            className="w-full flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Building2 size={20} />
-            사업자 등록 신청
-          </button>
-        </div>
+        {/* 상세 등록 버튼 - 로그인 화면에서만 표시 */}
+        {!showSignup && (
+          <div className="mt-6 p-4 bg-yellow-50 rounded-lg border-2 border-yellow-200">
+            <p className="text-sm text-gray-700 mb-3 text-center font-medium">
+              📝 더 자세한 정보를 등록하고 싶으신가요?
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowRegistration(true)}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-white py-3 rounded-xl font-bold hover:from-yellow-600 hover:to-amber-600 transition-all shadow-md hover:shadow-lg transform hover:scale-[1.02]"
+            >
+              <Building2 size={20} />
+              상세 정보 등록 (선택사항)
+            </button>
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              서류 첨부, 영업시간 등 추가 정보 입력 가능
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Business Registration Modal */}

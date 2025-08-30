@@ -689,13 +689,32 @@ export default function BusinessRegistrationModal({ isOpen, onClose, onSubmit }:
                 <p className="text-sm text-red-700 mt-2">{submitError}</p>
               </div>
             ) : (
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>심사 안내</strong><br />
-                  제출해주신 서류를 바탕으로 심사가 진행되며, 
-                  승인까지 영업일 기준 1-3일 소요됩니다.
-                </p>
-              </div>
+              <>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>심사 안내</strong><br />
+                    제출해주신 서류를 바탕으로 심사가 진행되며, 
+                    승인까지 영업일 기준 1-3일 소요됩니다.
+                  </p>
+                </div>
+                
+                {/* 가입 버튼 강조 */}
+                <div className="mt-6 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-300 animate-pulse">
+                  <div className="text-center">
+                    <div className="text-4xl mb-3">👇</div>
+                    <p className="text-xl font-bold text-green-700 mb-2">
+                      모든 정보를 확인하셨나요?
+                    </p>
+                    <p className="text-lg text-gray-700">
+                      아래의 <span className="text-green-600 font-bold">"🚀 가입 신청하기"</span> 버튼을 클릭하여
+                    </p>
+                    <p className="text-lg text-gray-700">
+                      사업자 등록을 완료하세요!
+                    </p>
+                    <div className="text-4xl mt-3">⬇️</div>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         );
@@ -761,8 +780,13 @@ export default function BusinessRegistrationModal({ isOpen, onClose, onSubmit }:
               <Button
                 onClick={() => setCurrentStep(currentStep + 1)}
                 disabled={!isStepValid(currentStep)}
-                className="px-8 py-2 bg-blue-600 hover:bg-blue-700 font-black text-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{color: '#000000', textShadow: '1px 1px 2px rgba(255,255,255,0.8)'}}
+                className="px-10 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold text-lg shadow-xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  minWidth: '180px',
+                  border: '2px solid #3b82f6',
+                  borderRadius: '10px',
+                  boxShadow: '0 8px 20px rgba(59, 130, 246, 0.3)'
+                }}
               >
                 다음 단계로 →
               </Button>
@@ -770,21 +794,28 @@ export default function BusinessRegistrationModal({ isOpen, onClose, onSubmit }:
               <Button
                 onClick={handleSubmit}
                 disabled={!isStepValid(currentStep) || isSubmitting || submitSuccess}
-                className="px-8 py-2 bg-green-600 hover:bg-green-700 font-black text-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{color: '#000000', textShadow: '1px 1px 2px rgba(255,255,255,0.8)'}}
+                className="px-12 py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-black text-2xl shadow-2xl transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed animate-pulse"
+                style={{
+                  minWidth: '200px',
+                  border: '3px solid #22c55e',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 25px rgba(34, 197, 94, 0.3)'
+                }}
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    신청 중...
+                    <Loader2 className="w-6 h-6 mr-3 animate-spin" />
+                    신청 처리 중...
                   </>
                 ) : submitSuccess ? (
                   <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    신청 완료됨
+                    <CheckCircle className="w-6 h-6 mr-3" />
+                    ✨ 신청 완료!
                   </>
                 ) : (
-                  '신청 완료'
+                  <span className="flex items-center justify-center">
+                    🚀 가입 신청하기
+                  </span>
                 )}
               </Button>
             )}

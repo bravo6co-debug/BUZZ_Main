@@ -179,7 +179,44 @@ export function StoreManagement() {
 
     setLoading(true)
     try {
-      // 1. business_applications 상태를 'approved'로 업데이트
+      // 1. 임시 비밀번호 생성
+      const tempPassword = Math.random().toString(36).slice(-8).toUpperCase()
+      
+      // 2. Supabase Auth에 사용자 계정 생성
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: application.email,
+        password: tempPassword,
+        email_confirm: true, // 이메일 확인 건너뛰기
+        user_metadata: {
+          business_name: application.business_name,
+          business_number: application.business_number,
+          owner_name: application.owner_name,
+          phone: application.phone,
+          role: 'business_owner'
+        }
+      })
+
+      if (authError) {
+        console.error('Auth 계정 생성 실패:', authError)
+        // 이미 존재하는 이메일인 경우 기존 사용자 조회
+        if (authError.message?.includes('already exists')) {
+          const { data: { users }, error: listError } = await supabase.auth.admin.listUsers()
+          if (!listError && users) {
+            const existingUser = users.find(u => u.email === application.email)
+            if (existingUser) {
+              authData = { user: existingUser }
+            } else {
+              throw new Error('기존 사용자를 찾을 수 없습니다')
+            }
+          } else {
+            throw authError
+          }
+        } else {
+          throw authError
+        }
+      }
+
+      // 3. business_applications 상태를 'approved'로 업데이트
       const { error: updateError } = await supabase
         .from('business_applications')
         .update({
@@ -191,16 +228,20 @@ export function StoreManagement() {
 
       if (updateError) throw updateError
 
-      // 2. businesses 테이블에 새 비즈니스 생성 (기본 컬럼만 사용)
+      // 4. businesses 테이블에 새 비즈니스 생성 (Auth owner_id 사용)
       const insertData = {
-        user_id: '00000000-0000-0000-0000-000000000000', // 임시 UUID
-        name: application.business_name,
+        owner_id: authData.user.id, // Supabase Auth에서 생성된 실제 owner_id 사용
+        business_name: application.business_name,  // name이 아닌 business_name 사용
         business_number: application.business_number,
         category: application.category,
-        description: application.description || '',
         address: application.address,
         phone: application.phone,
-        status: 'active'
+        verification_status: 'approved'
+      }
+      
+      // 선택적 필드들
+      if (application.description) {
+        insertData.description = application.description
       }
 
       // 선택적 컬럼들은 존재할 때만 추가
@@ -214,11 +255,12 @@ export function StoreManagement() {
 
       if (insertError) {
         console.error('Insert error details:', insertError)
+        // businesses 테이블 삽입 실패 시 Auth 계정 삭제 (롤백)
+        await supabase.auth.admin.deleteUser(authData.user.id)
         throw insertError
       }
 
-      // 3. 임시 비밀번호 생성 및 SMS 발송
-      const tempPassword = Math.random().toString(36).slice(-8).toUpperCase()
+      // 5. 임시 비밀번호 SMS 발송
       
       console.log(`매장 승인: ${application.business_name}`)
       console.log(`사업자등록번호: ${application.business_number}`)

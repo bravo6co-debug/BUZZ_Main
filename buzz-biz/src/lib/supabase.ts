@@ -23,7 +23,29 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 })
 
 // Business-specific auth functions
-export const signInBusiness = async (email: string, password: string) => {
+export const signInBusiness = async (emailOrBusinessNumber: string, password: string) => {
+  // 사업자번호인 경우 이메일 형식으로 변환
+  let email = emailOrBusinessNumber;
+  if (!emailOrBusinessNumber.includes('@')) {
+    // 사업자번호인 경우, business_applications에서 이메일 찾기
+    const cleanBusinessNumber = emailOrBusinessNumber.replace(/-/g, '');
+    
+    // business_applications 테이블에서 승인된 비즈니스의 이메일 찾기
+    const { data: application } = await supabase
+      .from('business_applications')
+      .select('email')
+      .eq('business_number', cleanBusinessNumber)
+      .eq('status', 'approved')
+      .single()
+    
+    if (application?.email) {
+      email = application.email;
+    } else {
+      // 이메일을 찾을 수 없으면 기본 형식 사용 (하위 호환성)
+      email = `${cleanBusinessNumber}@buzz.biz`;
+    }
+  }
+  
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password
@@ -34,11 +56,29 @@ export const signInBusiness = async (email: string, password: string) => {
     const { data: business, error: bizError } = await supabase
       .from('businesses')
       .select('*')
-      .eq('owner_id', data.user.id)
+      .eq('owner_id', data.user.id) // owner_id 사용
       .single()
     
     if (bizError || !business) {
-      // User exists but no business account
+      // businesses 테이블에 없으면 business_applications에서 확인
+      const { data: pendingApp } = await supabase
+        .from('business_applications')
+        .select('*')
+        .eq('email', data.user.email)
+        .single()
+      
+      if (pendingApp) {
+        // 승인 대기 중이거나 데이터 동기화 문제
+        return { 
+          data: { 
+            ...data, 
+            business: null,
+            pendingApplication: pendingApp 
+          }, 
+          error: null 
+        }
+      }
+      
       return { data: { ...data, business: null }, error: null }
     }
     
