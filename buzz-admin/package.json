@@ -45,21 +45,21 @@
             "recharts": "^2.15.2",
             "sonner": "^2.0.3",
             "tailwind-merge": "*",
-            "vaul": "^1.1.2"
+            "vaul": "^1.1.2",
+            "vite": "^6.3.5",
+            "@vitejs/plugin-react-swc": "^3.10.2",
+            "typescript": "^5.7.3",
+            "tailwindcss": "^3.4.16",
+            "postcss": "^8.4.49",
+            "autoprefixer": "^10.4.20"
       },
       "devDependencies": {
             "@types/node": "^20.10.0",
             "@types/react": "^18.3.12",
-            "@types/react-dom": "^18.3.1",
-            "@vitejs/plugin-react-swc": "^3.10.2",
-            "autoprefixer": "^10.4.20",
-            "postcss": "^8.4.49",
-            "tailwindcss": "^3.4.16",
-            "typescript": "^5.7.3",
-            "vite": "^6.3.5"
+            "@types/react-dom": "^18.3.1"
       },
       "scripts": {
-            "dev": "npx vite",
-            "build": "npx vite build"
+            "dev": "vite",
+            "build": "vite build"
       }
 }
