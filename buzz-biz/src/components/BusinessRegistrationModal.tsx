@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -12,12 +12,15 @@ import { authApi, uploadApi } from "../services/api.service";
 import { storageService } from "../services/storage.service";
 import { supabase } from "../lib/supabase";
 import smsService from '../services/smsService';
+import { businessService } from "../services/business.service";
 import { toast } from "sonner";
 
 interface BusinessRegistrationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit?: (registrationData: BusinessRegistrationData) => void;
+  mode?: 'create' | 'edit';
+  initialData?: Partial<BusinessRegistrationData>;
 }
 
 export interface BusinessRegistrationData {
@@ -61,30 +64,39 @@ const categories = [
   "의료/약국", "교육", "스포츠/레저", "서비스", "기타"
 ];
 
-export default function BusinessRegistrationModal({ isOpen, onClose, onSubmit }: BusinessRegistrationModalProps) {
-  const [formData, setFormData] = useState<Partial<BusinessRegistrationData>>({
-    businessName: '',
-    businessNumber: '',
-    ownerName: '',
-    phoneNumber: '',
-    email: '',
-    address: '',
-    detailAddress: '',
-    postalCode: '',
-    category: '',
-    description: '',
-    displayTimeSlots: {
-      morning: false,
-      lunch: false,
-      dinner: false,
-      night: false
-    },
-    businessRegistration: [],
-    bankbook: [],
-    idCard: [],
-    termsAgreed: false,
-    privacyAgreed: false,
-    marketingAgreed: false,
+export default function BusinessRegistrationModal({ isOpen, onClose, onSubmit, mode = 'create', initialData }: BusinessRegistrationModalProps) {
+  const [formData, setFormData] = useState<Partial<BusinessRegistrationData>>(() => {
+    const defaultData = {
+      businessName: '',
+      businessNumber: '',
+      ownerName: '',
+      phoneNumber: '',
+      email: '',
+      address: '',
+      detailAddress: '',
+      postalCode: '',
+      category: '',
+      description: '',
+      displayTimeSlots: {
+        morning: false,
+        lunch: false,
+        dinner: false,
+        night: false
+      },
+      businessRegistration: [],
+      bankbook: [],
+      idCard: [],
+      termsAgreed: false,
+      privacyAgreed: false,
+      marketingAgreed: false,
+    };
+    
+    // If initialData is provided (edit mode), merge it with defaults
+    if (initialData && mode === 'edit') {
+      return { ...defaultData, ...initialData };
+    }
+    
+    return defaultData;
   });
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -92,6 +104,47 @@ export default function BusinessRegistrationModal({ isOpen, onClose, onSubmit }:
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  // Reset form data when modal opens or initialData changes
+  useEffect(() => {
+    if (isOpen) {
+      const defaultData = {
+        businessName: '',
+        businessNumber: '',
+        ownerName: '',
+        phoneNumber: '',
+        email: '',
+        address: '',
+        detailAddress: '',
+        postalCode: '',
+        category: '',
+        description: '',
+        displayTimeSlots: {
+          morning: false,
+          lunch: false,
+          dinner: false,
+          night: false
+        },
+        businessRegistration: [],
+        bankbook: [],
+        idCard: [],
+        termsAgreed: mode === 'edit', // Auto-accept terms for edit mode
+        privacyAgreed: mode === 'edit', // Auto-accept privacy for edit mode
+        marketingAgreed: false,
+      };
+      
+      if (initialData && mode === 'edit') {
+        setFormData({ ...defaultData, ...initialData });
+      } else {
+        setFormData(defaultData);
+      }
+      
+      // Reset states
+      setCurrentStep(1);
+      setSubmitError('');
+      setSubmitSuccess(false);
+    }
+  }, [isOpen, initialData, mode]);
 
   const handleInputChange = (field: keyof BusinessRegistrationData, value: any) => {
     setFormData(prev => ({
@@ -144,6 +197,60 @@ export default function BusinessRegistrationModal({ isOpen, onClose, onSubmit }:
     setSubmitError('');
 
     try {
+      if (mode === 'edit') {
+        await handleUpdateSubmit();
+      } else {
+        await handleCreateSubmit();
+      }
+    } catch (error: any) {
+      console.error('Submission error:', error);
+      setSubmitError(
+        error?.error?.message || 
+        error?.message || 
+        (mode === 'edit' ? '정보 수정 중 오류가 발생했습니다' : '신청서 제출 중 오류가 발생했습니다')
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateSubmit = async () => {
+    // Get current business info
+    const currentBusiness = await businessService.getCurrentBusiness();
+    if (!currentBusiness) {
+      throw new Error('비즈니스 정보를 찾을 수 없습니다');
+    }
+
+    // Update business info
+    const updateData = {
+      name: formData.businessName,
+      business_number: formData.businessNumber,
+      category: formData.category,
+      address: `${formData.address} ${formData.detailAddress || ''}`.trim(),
+      phone: formData.phoneNumber,
+      description: formData.description,
+      display_time_slots: formData.displayTimeSlots
+    };
+
+    const result = await businessService.updateBusinessInfo(currentBusiness.id, updateData);
+    
+    if (result.success) {
+      setSubmitSuccess(true);
+      toast.success('비즈니스 정보가 성공적으로 수정되었습니다');
+      
+      // Call parent callback
+      onSubmit?.(formData as BusinessRegistrationData);
+      
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+    } else {
+      throw new Error(result.error || '정보 수정에 실패했습니다');
+    }
+  };
+
+  const handleCreateSubmit = async () => {
       // 1단계: 파일 업로드 (Supabase Storage 사용) - 개발/테스트 모드에서는 스킵
       let uploadedDocuments: any[] = [];
       const businessId = `business_${Date.now()}`; // 임시 비즈니스 ID
@@ -315,17 +422,6 @@ export default function BusinessRegistrationModal({ isOpen, onClose, onSubmit }:
         console.error('Database insertion error:', dbError);
         throw new Error(dbError?.message || '데이터베이스 저장 중 오류가 발생했습니다');
       }
-
-    } catch (error: any) {
-      console.error('Submission error:', error);
-      setSubmitError(
-        error?.error?.message || 
-        error?.message || 
-        '신청서 제출 중 오류가 발생했습니다'
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const renderStep = () => {
@@ -674,11 +770,15 @@ export default function BusinessRegistrationModal({ isOpen, onClose, onSubmit }:
               <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-green-600" />
-                  <p className="text-green-800 font-medium">신청이 완료되었습니다!</p>
+                  <p className="text-green-800 font-medium">
+                    {mode === 'edit' ? '정보 수정이 완료되었습니다!' : '신청이 완료되었습니다!'}
+                  </p>
                 </div>
-                <p className="text-sm text-green-700 mt-2">
-                  심사 결과는 영업일 기준 1-3일 내에 SMS로 안내드립니다.
-                </p>
+                {mode === 'create' && (
+                  <p className="text-sm text-green-700 mt-2">
+                    심사 결과는 영업일 기준 1-3일 내에 SMS로 안내드립니다.
+                  </p>
+                )}
               </div>
             ) : submitError ? (
               <div className="bg-red-50 p-4 rounded-lg border border-red-200">
@@ -703,13 +803,13 @@ export default function BusinessRegistrationModal({ isOpen, onClose, onSubmit }:
                   <div className="text-center">
                     <div className="text-4xl mb-3">👇</div>
                     <p className="text-xl font-bold text-green-700 mb-2">
-                      모든 정보를 확인하셨나요?
+                      {mode === 'edit' ? '수정사항을 확인하셨나요?' : '모든 정보를 확인하셨나요?'}
                     </p>
                     <p className="text-lg text-gray-700">
-                      아래의 <span className="text-green-600 font-bold">"🚀 가입 신청하기"</span> 버튼을 클릭하여
+                      아래의 <span className="text-green-600 font-bold">{mode === 'edit' ? '"✏️ 정보 수정하기"' : '"🚀 가입 신청하기"'}</span> 버튼을 클릭하여
                     </p>
                     <p className="text-lg text-gray-700">
-                      사업자 등록을 완료하세요!
+                      {mode === 'edit' ? '비즈니스 정보 수정을 완료하세요!' : '사업자 등록을 완료하세요!'}
                     </p>
                     <div className="text-4xl mt-3">⬇️</div>
                   </div>
@@ -730,7 +830,7 @@ export default function BusinessRegistrationModal({ isOpen, onClose, onSubmit }:
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 size={20} />
-            사업자 등록 신청
+            {mode === 'edit' ? '사업자 정보 수정' : '사업자 등록 신청'}
           </DialogTitle>
         </DialogHeader>
 
@@ -805,16 +905,16 @@ export default function BusinessRegistrationModal({ isOpen, onClose, onSubmit }:
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-6 h-6 mr-3 animate-spin" />
-                    신청 처리 중...
+                    {mode === 'edit' ? '수정 처리 중...' : '신청 처리 중...'}
                   </>
                 ) : submitSuccess ? (
                   <>
                     <CheckCircle className="w-6 h-6 mr-3" />
-                    ✨ 신청 완료!
+                    {mode === 'edit' ? '✨ 수정 완료!' : '✨ 신청 완료!'}
                   </>
                 ) : (
                   <span className="flex items-center justify-center">
-                    🚀 가입 신청하기
+                    {mode === 'edit' ? '✏️ 정보 수정하기' : '🚀 가입 신청하기'}
                   </span>
                 )}
               </Button>

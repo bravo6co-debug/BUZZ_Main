@@ -47,7 +47,7 @@ Thumbs.db
 *.tmp
 
 # Test files
-auto-signup.js
+auto-signup*.js
 simple-signup-test.js
 e2e-coupon-admin-test.js
 buzz-biz-auto-signup.js
@@ -55,6 +55,24 @@ test-db-connection.js
 test-storage.js
 test-supabase.html
 test-file.pdf
+test-*.js
+test-*.html
+check-*.js
+signup-*.js
+update-*.js
+execute-*.js
+verify-*.js
+debug-*.js
+debug-*.html
+apply-*.js
+create-*.js
+insert-*.js
+playwright-*.js
+approved-*.csv
+*.sql
+*.md
+!README.md
+!docs/**/*.md
 
 # Supabase local
 supabase/

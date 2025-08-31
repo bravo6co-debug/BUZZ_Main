@@ -2,11 +2,13 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
+// Regular client for general operations
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
@@ -21,6 +23,29 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     }
   }
 })
+
+// Admin client with Service Role Key for admin operations
+// Only use this for admin operations like creating users
+export const supabaseAdmin = supabaseServiceRoleKey 
+  ? createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false
+      },
+      global: {
+        headers: {
+          'x-app-version': import.meta.env.VITE_ADMIN_VERSION || '1.0.0',
+          'x-app-type': 'admin-service'
+        }
+      }
+    })
+  : null
+
+// Helper function to check if admin client is available
+export const hasAdminAccess = () => {
+  return supabaseAdmin !== null
+}
 
 // Admin-specific auth functions
 export const signInAdmin = async (email: string, password: string) => {

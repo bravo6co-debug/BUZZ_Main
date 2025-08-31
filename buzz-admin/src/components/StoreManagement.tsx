@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import { Input } from './ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
-import { supabase } from '../lib/supabase'
+import { supabase, supabaseAdmin, hasAdminAccess } from '../lib/supabase'
 import smsService from '../services/smsService'
 import { 
   Store, 
@@ -148,6 +148,7 @@ export function StoreManagement() {
 
   // 신청서 데이터 로드
   const fetchPendingApplications = async () => {
+    console.log('[StoreManagement] 데이터 로딩 시작...')
     setLoading(true)
     try {
       const { data, error } = await supabase
@@ -157,33 +158,56 @@ export function StoreManagement() {
         .order('applied_at', { ascending: false })
 
       if (error) {
-        console.error('Error fetching applications:', error)
+        console.error('[StoreManagement] Error fetching applications:', error)
+        setPendingApplications([]) // 에러 시에도 빈 배열 설정
         return
       }
 
+      console.log(`[StoreManagement] 조회 성공: ${data?.length || 0}개의 대기 중인 신청`)
+      console.log('[StoreManagement] 데이터:', data)
       setPendingApplications(data || [])
     } catch (error) {
-      console.error('Error:', error)
+      console.error('[StoreManagement] Exception:', error)
+      setPendingApplications([]) // 예외 시에도 빈 배열 설정
     } finally {
       setLoading(false)
+      console.log('[StoreManagement] 데이터 로딩 완료')
     }
   }
 
   useEffect(() => {
+    console.log('[StoreManagement] 컴포넌트 마운트됨')
     fetchPendingApplications()
+    
+    // 5초마다 자동 새로고침 (선택적)
+    const interval = setInterval(() => {
+      console.log('[StoreManagement] 자동 새로고침...')
+      fetchPendingApplications()
+    }, 30000) // 30초마다
+    
+    return () => {
+      console.log('[StoreManagement] 컴포넌트 언마운트됨')
+      clearInterval(interval)
+    }
   }, [])
 
   const handleApprove = async (applicationId: string) => {
     const application = pendingApplications.find(a => a.id === applicationId)
     if (!application) return
 
+    // Service Role Key가 없으면 에러 표시
+    if (!hasAdminAccess()) {
+      alert('⚠️ Service Role Key가 설정되지 않았습니다.\n\n.env 파일에 VITE_SUPABASE_SERVICE_ROLE_KEY를 추가해주세요.')
+      return
+    }
+
     setLoading(true)
     try {
       // 1. 임시 비밀번호 생성
       const tempPassword = Math.random().toString(36).slice(-8).toUpperCase()
       
-      // 2. Supabase Auth에 사용자 계정 생성
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      // 2. Supabase Auth에 사용자 계정 생성 (Admin 클라이언트 사용)
+      const { data: authData, error: authError } = await supabaseAdmin!.auth.admin.createUser({
         email: application.email,
         password: tempPassword,
         email_confirm: true, // 이메일 확인 건너뛰기
@@ -200,7 +224,7 @@ export function StoreManagement() {
         console.error('Auth 계정 생성 실패:', authError)
         // 이미 존재하는 이메일인 경우 기존 사용자 조회
         if (authError.message?.includes('already exists')) {
-          const { data: { users }, error: listError } = await supabase.auth.admin.listUsers()
+          const { data: { users }, error: listError } = await supabaseAdmin!.auth.admin.listUsers()
           if (!listError && users) {
             const existingUser = users.find(u => u.email === application.email)
             if (existingUser) {
@@ -229,14 +253,20 @@ export function StoreManagement() {
       if (updateError) throw updateError
 
       // 4. businesses 테이블에 새 비즈니스 생성 (Auth owner_id 사용)
-      const insertData = {
+      const insertData: any = {
         owner_id: authData.user.id, // Supabase Auth에서 생성된 실제 owner_id 사용
-        business_name: application.business_name,  // name이 아닌 business_name 사용
+        business_name: application.business_name,
         business_number: application.business_number,
-        category: application.category,
+        owner_name: application.owner_name,
+        category: application.category || '기타',
         address: application.address,
         phone: application.phone,
-        verification_status: 'approved'
+        // email 컬럼 제거 - 스키마 캐시 문제로 임시 제거
+        // email: application.email,
+        verification_status: 'approved',
+        application_id: applicationId,
+        approved_at: new Date().toISOString(),
+        status: 'active'
       }
       
       // 선택적 필드들
@@ -246,18 +276,39 @@ export function StoreManagement() {
 
       // 선택적 컬럼들은 존재할 때만 추가
       if (application.display_time_slots) {
+        insertData.display_time_slots = application.display_time_slots
         insertData.business_hours = application.display_time_slots
       }
+      
+      // 첨부 서류가 있으면 추가
+      if (application.documents && application.documents.length > 0) {
+        insertData.documents = application.documents
+      }
 
+      console.log('Inserting business data:', insertData)
+      
       const { error: insertError } = await supabase
         .from('businesses')
         .insert(insertData)
 
       if (insertError) {
         console.error('Insert error details:', insertError)
+        console.error('Insert error message:', insertError.message)
+        console.error('Insert error code:', insertError.code)
+        
+        // 테이블이 없는 경우 체크
+        if (insertError.code === '42P01') {
+          throw new Error('businesses 테이블이 존재하지 않습니다. create-businesses-table.sql을 먼저 실행해주세요.')
+        }
+        
+        // 컬럼이 없는 경우 체크
+        if (insertError.code === '42703') {
+          throw new Error(`누락된 컬럼이 있습니다: ${insertError.message}. create-businesses-table.sql을 실행해주세요.`)
+        }
+        
         // businesses 테이블 삽입 실패 시 Auth 계정 삭제 (롤백)
-        await supabase.auth.admin.deleteUser(authData.user.id)
-        throw insertError
+        await supabaseAdmin!.auth.admin.deleteUser(authData.user.id)
+        throw new Error(`비즈니스 생성 실패: ${insertError.message}`)
       }
 
       // 5. 임시 비밀번호 SMS 발송
@@ -403,8 +454,12 @@ export function StoreManagement() {
                 <Clock className="h-4 w-4 text-orange-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl text-orange-600">{pendingApplications.length}</div>
-                <p className="text-xs text-muted-foreground">실시간 데이터</p>
+                <div className="text-2xl text-orange-600">
+                  {loading ? '...' : pendingApplications.length}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {loading ? '로딩 중...' : '실시간 데이터'}
+                </p>
               </CardContent>
             </Card>
 
