@@ -102,17 +102,31 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
       });
 
       if (error) {
-        setError('비밀번호 재설정 요청 중 오류가 발생했습니다.');
+        // Edge Function이 배포되지 않은 경우 fallback 메시지
+        if (error.message.includes('not found') || error.message.includes('Failed to send')) {
+          setError('비밀번호 재설정 기능이 준비 중입니다. 관리자에게 문의해주세요.');
+          console.info('Edge Function이 배포되지 않았습니다. docs/edge-function-deployment-guide.md를 참고하여 배포해주세요.');
+        } else {
+          setError('비밀번호 재설정 요청 중 오류가 발생했습니다.');
+        }
       } else if (data?.success) {
-        setSuccessMessage(`✅ ${data.data.businessName}님의 이메일(${data.data.email})로 비밀번호 재설정 링크를 발송했습니다.`);
-        setShowPasswordReset(false);
-        setResetBusinessNumber('');
+        setSuccessMessage(data.message || '비밀번호 재설정 링크가 이메일로 발송되었습니다.');
+        setTimeout(() => {
+          setShowPasswordReset(false);
+          setResetBusinessNumber('');
+          setSuccessMessage('');
+        }, 3000);
       } else {
         setError(data?.error || '비밀번호 재설정에 실패했습니다.');
       }
     } catch (err: any) {
       console.error('Password reset error:', err);
-      setError('비밀번호 재설정 중 오류가 발생했습니다.');
+      // 구체적인 에러 메시지 제공
+      if (err.message && err.message.includes('CORS')) {
+        setError('서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      } else {
+        setError('비밀번호 재설정 요청에 실패했습니다. 관리자에게 문의해주세요.');
+      }
     } finally {
       setLoading(false);
     }
