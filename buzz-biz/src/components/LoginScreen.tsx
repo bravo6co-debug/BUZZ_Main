@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Store, Lock, AlertCircle, Loader2, Building2, LogIn, UserPlus, ArrowLeft, Sparkles, Info } from 'lucide-react';
+import { Store, Lock, AlertCircle, Loader2, Building2, LogIn, UserPlus, ArrowLeft, Sparkles, Info, KeyRound } from 'lucide-react';
 import { authApi } from '../services/api.service';
 import { signInBusiness, registerBusiness } from '../lib/supabase';
 import BusinessRegistrationModal from './BusinessRegistrationModal';
@@ -16,8 +16,11 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [ownerName, setOwnerName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [showSignup, setShowSignup] = useState(false);
   const [showRegistration, setShowRegistration] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [resetBusinessNumber, setResetBusinessNumber] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,6 +82,37 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     } catch (err: any) {
       console.error('Login error:', err);
       setError('로그인 처리 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMessage('');
+    setLoading(true);
+
+    try {
+      const { supabase } = await import('../lib/supabase');
+      
+      // Edge Function 호출
+      const { data, error } = await supabase.functions.invoke('reset-password', {
+        body: { businessNumber: resetBusinessNumber }
+      });
+
+      if (error) {
+        setError('비밀번호 재설정 요청 중 오류가 발생했습니다.');
+      } else if (data?.success) {
+        setSuccessMessage(`✅ ${data.data.businessName}님의 이메일(${data.data.email})로 비밀번호 재설정 링크를 발송했습니다.`);
+        setShowPasswordReset(false);
+        setResetBusinessNumber('');
+      } else {
+        setError(data?.error || '비밀번호 재설정에 실패했습니다.');
+      }
+    } catch (err: any) {
+      console.error('Password reset error:', err);
+      setError('비밀번호 재설정 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -224,6 +258,17 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                 )}
               </button>
             </form>
+
+            {/* Password Reset Link */}
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => setShowPasswordReset(true)}
+                className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+              >
+                <KeyRound className="w-4 h-4" />
+                비밀번호를 잊으셨나요?
+              </button>
+            </div>
 
             <div className="mt-6 text-center space-y-2">
               <button
@@ -416,6 +461,90 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             alert('사업자 등록 신청이 완료되었습니다. 심사 결과는 영업일 기준 1-3일 내에 연락드리겠습니다.');
           }}
         />
+      )}
+
+      {/* Password Reset Modal */}
+      {showPasswordReset && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
+                <KeyRound className="w-8 h-8 text-primary" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">비밀번호 재설정</h2>
+              <p className="text-sm text-gray-500 mt-2">
+                등록된 사업자번호를 입력하시면 이메일로 재설정 링크를 보내드립니다.
+              </p>
+            </div>
+
+            <form onSubmit={handlePasswordReset} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  사업자 등록번호
+                </label>
+                <input
+                  type="text"
+                  value={resetBusinessNumber}
+                  onChange={(e) => {
+                    const input = e.target.value.replace(/[^0-9]/g, '');
+                    let formatted = input;
+                    if (input.length > 3) {
+                      formatted = input.slice(0, 3) + '-' + input.slice(3);
+                    }
+                    if (input.length > 5) {
+                      formatted = input.slice(0, 3) + '-' + input.slice(3, 5) + '-' + input.slice(5, 10);
+                    }
+                    setResetBusinessNumber(formatted);
+                  }}
+                  placeholder="123-45-67890"
+                  maxLength={12}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                  required
+                />
+              </div>
+
+              {error && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg">
+                  <AlertCircle className="w-5 h-5" />
+                  <span className="text-sm">{error}</span>
+                </div>
+              )}
+
+              {successMessage && (
+                <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-lg">
+                  <Info className="w-5 h-5" />
+                  <span className="text-sm">{successMessage}</span>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordReset(false);
+                    setResetBusinessNumber('');
+                    setError('');
+                    setSuccessMessage('');
+                  }}
+                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    '재설정 링크 발송'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
