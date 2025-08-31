@@ -156,14 +156,34 @@ export class AuthController {
       
       // Add signup rewards for new users
       if (isNewUser) {
+        // Fetch the actual issued coupon from database
+        const userCoupon = await db('user_coupons')
+          .join('coupons', 'user_coupons.coupon_id', 'coupons.id')
+          .where('user_coupons.user_id', user.id)
+          .where('coupons.type', 'signup')
+          .select(
+            'user_coupons.id as coupon_instance_id',
+            'user_coupons.qr_code_data',
+            'user_coupons.expires_at',
+            'user_coupons.status',
+            'coupons.name',
+            'coupons.discount_value',
+            'coupons.discount_type'
+          )
+          .first();
+        
         responseData.rewards = {
           signupBonus: {
             mileage: config.business.signupBonusMileage,
-            coupon: {
-              id: 'welcome-coupon',
-              amount: config.business.signupBonusCoupon,
-              expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            },
+            coupon: userCoupon ? {
+              id: userCoupon.coupon_instance_id,
+              name: userCoupon.name,
+              amount: userCoupon.discount_value,
+              type: userCoupon.discount_type,
+              qrCode: userCoupon.qr_code_data,
+              status: userCoupon.status,
+              expiresAt: userCoupon.expires_at,
+            } : null,
           },
         };
       }
