@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Camera, Gift, Coins, Check, RotateCcw, X, Loader2, Zap, ZapOff, AlertCircle } from 'lucide-react';
+import { Camera, Gift, Coins, Check, RotateCcw, X, Loader2, Zap, ZapOff, AlertCircle, TrendingUp, CreditCard } from 'lucide-react';
 import { qrApi } from '../services/api.service';
 import { realtimeQRService } from '../services/realtime-qr.service';
 import { businessService } from '../services/business.service';
@@ -256,34 +256,43 @@ export function QRScanScreen() {
   };
 
   const renderScanningView = () => (
-    <div className="p-4 space-y-6">
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="text-center">
-        <h2 className="text-xl font-semibold mb-4">📸 QR 코드 스캔</h2>
+      <div className="bg-gradient-to-b from-primary/5 to-transparent px-4 pt-6 pb-4">
+        <h2 className="text-xl font-bold text-center">QR 코드 스캔</h2>
         
         {/* Mode Toggle Tabs */}
-        <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-lg">
+        <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-xl mt-4">
           <Button
-            variant={scanMode === 'coupon' ? 'default' : 'ghost'}
-            className="h-12 text-sm font-medium"
+            variant={scanMode === 'coupon' ? 'default' : 'outline'}
+            className={`h-12 text-sm font-medium transition-all ${
+              scanMode === 'coupon' 
+                ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' 
+                : 'hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600'
+            }`}
             onClick={() => setScanMode('coupon')}
           >
-            <Gift className="w-4 h-4 mr-2" />
-            🎫 할인 쿠폰
+            <Gift className="w-4 h-4 mr-2" strokeWidth={2.5} />
+            할인 쿠폰
           </Button>
           <Button
-            variant={scanMode === 'mileage' ? 'default' : 'ghost'}
-            className="h-12 text-sm font-medium"
+            variant={scanMode === 'mileage' ? 'default' : 'outline'}
+            className={`h-12 text-sm font-medium transition-all ${
+              scanMode === 'mileage' 
+                ? 'bg-green-500 hover:bg-green-600 text-white border-green-500' 
+                : 'hover:bg-green-50 hover:border-green-300 hover:text-green-600'
+            }`}
             onClick={() => setScanMode('mileage')}
           >
-            <Coins className="w-4 h-4 mr-2" />
-            💰 마일리지
+            <Coins className="w-4 h-4 mr-2" strokeWidth={2.5} />
+            마일리지
           </Button>
         </div>
       </div>
 
-      {/* Camera Viewfinder */}
-      <Card className="p-0 overflow-hidden">
+      <div className="flex-1 overflow-auto px-4 pb-4 space-y-4">
+        {/* Camera Viewfinder */}
+        <Card className="p-0 overflow-hidden shadow-lg">
         <div className="aspect-square relative bg-black rounded-lg">
           <video
             ref={videoRef}
@@ -339,10 +348,10 @@ export function QRScanScreen() {
             </div>
           )}
         </div>
-      </Card>
+        </Card>
 
-      {/* Status and Instructions */}
-      <div className="text-center space-y-2">
+        {/* Status and Instructions */}
+        <div className="text-center space-y-2">
         {isScanning ? (
           <div className="flex items-center justify-center gap-2">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -360,36 +369,45 @@ export function QRScanScreen() {
             {scanMode === 'coupon' ? '쿠폰 QR 스캔 준비' : '마일리지 QR 스캔 준비'}
           </p>
         )}
+        </div>
       </div>
     </div>
   );
 
   const renderConfirmationView = () => (
-    <div className="p-4 space-y-6">
-      <div className="flex items-center gap-2">
-        <Check className="w-6 h-6 text-green-600" />
-        <h2 className="text-xl font-semibold">
-          {scanMode === 'coupon' ? '할인 쿠폰 확인' : '마일리지 사용 확인'}
-        </h2>
+    <div className="flex flex-col h-full">
+      <div className="bg-gradient-to-b from-green-50 to-transparent px-4 pt-6 pb-4">
+        <div className="flex items-center justify-center gap-2">
+          <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+            <Check className="w-6 h-6 text-green-600" strokeWidth={2.5} />
+          </div>
+          <h2 className="text-xl font-bold">
+            {scanMode === 'coupon' ? '할인 쿠폰 확인' : '마일리지 사용 확인'}
+          </h2>
+        </div>
       </div>
 
-      {/* Scanned QR Info */}
-      {scannedData && (
-        <Card className="p-3 bg-green-50 border-green-200">
-          <div className="flex items-center gap-2 mb-2">
-            <Check className="w-4 h-4 text-green-600" />
-            <span className="text-sm font-medium text-green-800">QR 코드 스캔 완료</span>
-          </div>
-          <p className="text-xs text-green-600 font-mono break-all">{scannedData}</p>
-        </Card>
-      )}
+      <div className="flex-1 overflow-auto px-4 pb-4 space-y-4">
 
-      {scanMode === 'coupon' ? (
-        <Card className="p-4 space-y-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Gift className="w-5 h-5 text-primary" />
-            <h3 className="font-semibold">🎫 쿠폰 정보</h3>
-          </div>
+        {/* Scanned QR Info */}
+        {scannedData && (
+          <Card className="p-4 bg-green-50/50 border-green-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Check className="w-4 h-4 text-green-600" strokeWidth={2.5} />
+              <span className="text-sm font-semibold text-green-800">QR 코드 스캔 완료</span>
+            </div>
+            <p className="text-xs text-green-700 font-mono break-all bg-white/50 p-2 rounded">{scannedData}</p>
+          </Card>
+        )}
+
+        {scanMode === 'coupon' ? (
+          <Card className="p-4 space-y-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Gift className="w-5 h-5 text-orange-600" strokeWidth={2.5} />
+              </div>
+              <h3 className="font-semibold">쿠폰 정보</h3>
+            </div>
           <div className="space-y-2">
             <div className="flex justify-between">
               <span className="text-muted-foreground">고객:</span>
@@ -409,19 +427,26 @@ export function QRScanScreen() {
             </div>
           </div>
           
-          <div className="border-t pt-4">
-            <h4 className="font-semibold mb-2">💰 할인 적용</h4>
-            <p className="text-sm text-muted-foreground">
-              결제 금액에서 {couponData.discount.toLocaleString()}원을 할인해 드립니다
-            </p>
-          </div>
-        </Card>
-      ) : (
-        <Card className="p-4 space-y-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Coins className="w-5 h-5 text-primary" />
-            <h3 className="font-semibold">💰 마일리지 정보</h3>
-          </div>
+            <div className="border-t pt-4 bg-orange-50/50 -mx-4 px-4 pb-4 -mb-4 rounded-b-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-6 h-6 bg-orange-100 rounded flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-orange-600" strokeWidth={2.5} />
+                </div>
+                <h4 className="font-semibold text-sm">할인 적용</h4>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                결제 금액에서 {couponData.discount.toLocaleString()}원을 할인해 드립니다
+              </p>
+            </div>
+          </Card>
+        ) : (
+          <Card className="p-4 space-y-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Coins className="w-5 h-5 text-blue-600" strokeWidth={2.5} />
+              </div>
+              <h3 className="font-semibold">마일리지 정보</h3>
+            </div>
           <div className="space-y-2">
             <div className="flex justify-between">
               <span className="text-muted-foreground">고객:</span>
@@ -437,43 +462,54 @@ export function QRScanScreen() {
             </div>
           </div>
           
-          <div className="border-t pt-4">
-            <h4 className="font-semibold mb-2">💳 포인트 사용</h4>
-            <p className="text-sm text-muted-foreground">
-              {mileageData.points.toLocaleString()}P를 사용하여 할인을 적용합니다
-            </p>
-          </div>
-        </Card>
-      )}
+            <div className="border-t pt-4 bg-blue-50/50 -mx-4 px-4 pb-4 -mb-4 rounded-b-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
+                  <CreditCard className="w-4 h-4 text-blue-600" strokeWidth={2.5} />
+                </div>
+                <h4 className="font-semibold text-sm">포인트 사용</h4>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {mileageData.points.toLocaleString()}P를 사용하여 할인을 적용합니다
+              </p>
+            </div>
+          </Card>
+        )}
 
-      <div className="flex gap-3">
-        <Button variant="outline" onClick={handleReset} className="flex-1">
-          <X className="w-4 h-4 mr-2" />
-          취소
-        </Button>
-        <Button onClick={handleConfirm} className="flex-1">
-          <Check className="w-4 h-4 mr-2" />
-          {scanMode === 'coupon' ? '쿠폰 사용하기' : '포인트 사용하기'}
-        </Button>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={handleReset} className="flex-1 h-12">
+            <X className="w-4 h-4 mr-2" strokeWidth={2.5} />
+            취소
+          </Button>
+          <Button onClick={handleConfirm} className="flex-1 h-12">
+            <Check className="w-4 h-4 mr-2" strokeWidth={2.5} />
+            {scanMode === 'coupon' ? '쿠폰 사용하기' : '포인트 사용하기'}
+          </Button>
+        </div>
       </div>
     </div>
   );
 
   const renderCompletedView = () => (
-    <div className="p-4 space-y-6">
-      <div className="text-center space-y-4">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-          <Check className="w-8 h-8 text-green-600" />
-        </div>
-        <h2 className="text-xl font-semibold">
-          ✅ {scanMode === 'coupon' ? '쿠폰 사용 완료!' : '포인트 사용 완료!'}
-        </h2>
-      </div>
+    <div className="flex flex-col h-full">
+      <div className="flex-1 flex items-center justify-center px-4">
+        <div className="text-center space-y-6">
+          <div className="w-20 h-20 bg-green-100 rounded-2xl flex items-center justify-center mx-auto">
+            <Check className="w-10 h-10 text-green-600" strokeWidth={2.5} />
+          </div>
+          <h2 className="text-2xl font-bold">
+            {scanMode === 'coupon' ? '쿠폰 사용 완료!' : '포인트 사용 완료!'}
+          </h2>
 
-      <Card className="p-4">
-        <h3 className="font-semibold mb-4">
-          🎉 {scanMode === 'coupon' ? '할인이 적용되었습니다' : '포인트가 사용되었습니다'}
-        </h3>
+          <Card className="p-5 max-w-sm mx-auto">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <Check className="w-5 h-5 text-green-600" strokeWidth={2.5} />
+              </div>
+              <h3 className="font-semibold">
+                {scanMode === 'coupon' ? '할인이 적용되었습니다' : '포인트가 사용되었습니다'}
+              </h3>
+            </div>
         <div className="space-y-2">
           <div className="flex justify-between">
             <span className="text-muted-foreground">
@@ -497,12 +533,14 @@ export function QRScanScreen() {
             </span>
           </div>
         </div>
-      </Card>
+          </Card>
 
-      <Button onClick={handleReset} className="w-full h-12">
-        <RotateCcw className="w-4 h-4 mr-2" />
-        🔄 새 QR 스캔하기
-      </Button>
+          <Button onClick={handleReset} className="h-12 px-8">
+            <RotateCcw className="w-4 h-4 mr-2" strokeWidth={2.5} />
+            새 QR 스캔하기
+          </Button>
+        </div>
+      </div>
     </div>
   );
 

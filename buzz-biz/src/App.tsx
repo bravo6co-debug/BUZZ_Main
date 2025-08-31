@@ -52,11 +52,15 @@ export default function App() {
   // Show loading screen
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-4">🏪</div>
-          <h1 className="text-2xl mb-2">BUZZ Business</h1>
-          <div className="animate-pulse text-gray-600">로딩 중...</div>
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center">
+            <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-primary">BUZZ Business</h1>
+            <p className="text-sm text-muted-foreground mt-2">로딩 중...</p>
+          </div>
         </div>
       </div>
     );
@@ -68,10 +72,10 @@ export default function App() {
   }
 
   const tabs = [
-    { id: 'home' as TabType, icon: Home, label: '🏠 홈' },
-    { id: 'qr' as TabType, icon: QrCode, label: '📸 QR스캔' },
-    { id: 'settlement' as TabType, icon: CreditCard, label: '💳 정산' },
-    { id: 'settings' as TabType, icon: Settings, label: '⚙️ 설정' }
+    { id: 'home' as TabType, icon: Home, label: '홈' },
+    { id: 'qr' as TabType, icon: QrCode, label: 'QR스캔' },
+    { id: 'settlement' as TabType, icon: CreditCard, label: '정산' },
+    { id: 'settings' as TabType, icon: Settings, label: '설정' }
   ];
 
   return (
@@ -82,21 +86,28 @@ export default function App() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="border-t border-border bg-card">
+      <div className="border-t border-border bg-card shadow-lg">
         <div className="flex">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-3 px-2 text-center transition-colors ${
+              className={`flex-1 py-3 px-2 text-center transition-all duration-200 relative ${
                 activeTab === tab.id
-                  ? 'text-primary bg-accent/50'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/5'
               }`}
             >
-              <div className="flex flex-col items-center gap-1">
-                <tab.icon className="w-5 h-5" />
-                <span className="text-xs">{tab.label.split(' ')[1]}</span>
+              {activeTab === tab.id && (
+                <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary" />
+              )}
+              <div className="flex flex-col items-center gap-1.5">
+                <tab.icon className={`transition-all duration-200 ${
+                  activeTab === tab.id ? 'w-5 h-5' : 'w-5 h-5'
+                }`} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
+                <span className={`text-xs font-medium transition-all duration-200 ${
+                  activeTab === tab.id ? 'opacity-100' : 'opacity-80'
+                }`}>{tab.label}</span>
               </div>
             </button>
           ))}

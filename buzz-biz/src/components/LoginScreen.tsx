@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Store, Lock, AlertCircle, Loader2, Building2 } from 'lucide-react';
+import { Store, Lock, AlertCircle, Loader2, Building2, LogIn, UserPlus, ArrowLeft, Sparkles, Info } from 'lucide-react';
 import { authApi } from '../services/api.service';
 import { signInBusiness, registerBusiness } from '../lib/supabase';
 import BusinessRegistrationModal from './BusinessRegistrationModal';
@@ -175,7 +175,10 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
-                  '🔑 로그인'
+                  <>
+                    <LogIn className="w-5 h-5 mr-2" strokeWidth={2.5} />
+                    로그인
+                  </>
                 )}
               </button>
             </form>
@@ -183,13 +186,15 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             <div className="mt-6 text-center space-y-2">
               <button
                 onClick={() => setShowSignup(true)}
-                className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 px-4 rounded-xl font-bold text-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] border-2 border-green-400"
+                className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 px-4 rounded-xl font-bold text-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] border-2 border-green-400 flex items-center justify-center"
               >
-                ✨ 간단 가입 신청 (30초 완료)
+                <Sparkles className="w-5 h-5 mr-2" strokeWidth={2.5} />
+                간단 가입 신청 (30초 완료)
               </button>
-              <p className="text-xs text-gray-500">
-                💡 관리자 승인 후 SMS로 비밀번호를 받으실 수 있습니다
-              </p>
+              <div className="flex items-center justify-center gap-1 text-xs text-gray-500">
+                <Info className="w-3 h-3" />
+                <span>관리자 승인 후 SMS로 비밀번호를 받으실 수 있습니다</span>
+              </div>
             </div>
 
             {/* Test Account Info */}
@@ -262,12 +267,27 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               </div>
 
               <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm text-blue-700 font-medium mb-2">📋 가입 승인 프로세스</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <Info className="w-4 h-4 text-blue-700" strokeWidth={2.5} />
+                  <p className="text-sm text-blue-700 font-medium">가입 승인 프로세스</p>
+                </div>
                 <ul className="text-sm text-blue-700 space-y-1">
-                  <li>1️⃣ 사업자 정보 입력 후 신청</li>
-                  <li>2️⃣ 관리자가 사업자등록번호 확인</li>
-                  <li>3️⃣ 승인 시 입력한 연락처로 SMS 비밀번호 발송</li>
-                  <li>4️⃣ 발급받은 비밀번호로 로그인</li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-semibold">1.</span>
+                    <span>사업자 정보 입력 후 신청</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-semibold">2.</span>
+                    <span>관리자가 사업자등록번호 확인</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-semibold">3.</span>
+                    <span>승인 시 입력한 연락처로 SMS 비밀번호 발송</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-semibold">4.</span>
+                    <span>발급받은 비밀번호로 로그인</span>
+                  </li>
                 </ul>
               </div>
 
@@ -286,16 +306,20 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                 {loading ? (
                   <Loader2 className="w-6 h-6 animate-spin text-white" />
                 ) : (
-                  <span className="text-white font-bold">🚀 가입 신청하기</span>
+                  <>
+                    <UserPlus className="w-5 h-5 mr-2" strokeWidth={2.5} />
+                    <span className="text-white font-bold">가입 신청하기</span>
+                  </>
                 )}
               </button>
 
               <button
                 type="button"
                 onClick={() => setShowSignup(false)}
-                className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors mt-2"
+                className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors mt-2 flex items-center justify-center"
               >
-                ← 로그인으로 돌아가기
+                <ArrowLeft className="w-4 h-4 mr-2" strokeWidth={2.5} />
+                로그인으로 돌아가기
               </button>
             </form>
           </>
@@ -304,9 +328,12 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         {/* 상세 등록 버튼 - 로그인 화면에서만 표시 */}
         {!showSignup && (
           <div className="mt-6 p-4 bg-yellow-50 rounded-lg border-2 border-yellow-200">
-            <p className="text-sm text-gray-700 mb-3 text-center font-medium">
-              📝 더 자세한 정보를 등록하고 싶으신가요?
-            </p>
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <Info className="w-4 h-4 text-gray-700" strokeWidth={2.5} />
+              <p className="text-sm text-gray-700 font-medium">
+                더 자세한 정보를 등록하고 싶으신가요?
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => setShowRegistration(true)}
