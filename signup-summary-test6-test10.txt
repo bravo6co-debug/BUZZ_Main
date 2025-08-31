@@ -1,0 +1,52 @@
+BUZZ App User Signup Report - Test Users 6-10
+==============================================
+Date: 2025-08-31
+Total Users Signed Up: 5
+
+User Details:
+=============
+
+1. test6@example.com
+   Name: 정민수
+   Password: Test123!
+   Status: Successfully signed up
+   Screenshot: signup-test6-1756635896812.png
+
+2. test7@example.com
+   Name: 강서연
+   Password: Test123!
+   Status: Successfully signed up
+   Screenshot: signup-test7-1756635918546.png
+
+3. test8@example.com
+   Name: 조현우
+   Password: Test123!
+   Status: Successfully signed up
+   Screenshot: signup-test8-1756635940098.png
+
+4. test9@example.com
+   Name: 김나영
+   Password: Test123!
+   Status: Successfully signed up
+   Screenshot: signup-test9-1756635961429.png
+
+5. test10@example.com
+   Name: 박지훈
+   Password: Test123!
+   Status: Successfully signed up
+   Screenshot: signup-test10-1756635982748.png
+
+Automation Process:
+==================
+- Used Playwright automation script
+- Navigated to https://buzz-liart.vercel.app/
+- Accessed signup form via "마이" -> "회원가입" tabs
+- Filled forms with Korean names, emails, and passwords
+- Captured screenshots for verification
+- All 5 users processed successfully without errors
+
+Previous Users (Already Registered):
+===================================
+test1@example.com through test5@example.com
+
+Total Test Users Now Available: 10 users (test1-test10)

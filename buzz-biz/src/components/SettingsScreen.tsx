@@ -35,12 +35,7 @@ export function SettingsScreen({ onLogout }: SettingsScreenProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [businessData, setBusinessData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const storeSettings = [
-    { icon: MessageSquare, label: '매장 안내 문구', action: 'edit-notice' },
-    { icon: Camera, label: '사진 관리', action: 'manage-photos' },
-    { icon: Clock, label: '영업시간 설정', action: 'set-hours' },
-    { icon: Phone, label: '연락처 수정', action: 'edit-contact' }
-  ];
+  // 개별 설정 항목 제거 - 수정 버튼으로 일괄 처리
 
   const appSettings = [
     { icon: Bell, label: '알림 설정', action: 'notifications', hasSwitch: true, enabled: true },
@@ -232,10 +227,6 @@ export function SettingsScreen({ onLogout }: SettingsScreenProps) {
             </div>
           )}
         </div>
-
-          <div className="space-y-1">
-            {storeSettings.map((item) => renderSettingItem(item))}
-          </div>
         </Card>
 
         {/* App Settings */}
