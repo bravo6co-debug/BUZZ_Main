@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import { Input } from './ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
-import { supabase, supabaseAdmin, hasAdminAccess } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import smsService from '../services/smsService'
 import { 
   Store, 
@@ -195,141 +195,25 @@ export function StoreManagement() {
     const application = pendingApplications.find(a => a.id === applicationId)
     if (!application) return
 
-    // Service Role Key가 없으면 에러 표시
-    if (!hasAdminAccess()) {
-      alert('⚠️ Service Role Key가 설정되지 않았습니다.\n\n.env 파일에 VITE_SUPABASE_SERVICE_ROLE_KEY를 추가해주세요.')
-      return
-    }
-
     setLoading(true)
     try {
-      // 1. 임시 비밀번호 생성
-      const tempPassword = Math.random().toString(36).slice(-8).toUpperCase()
-      
-      // 2. Supabase Auth에 사용자 계정 생성 (Admin 클라이언트 사용)
-      const { data: authData, error: authError } = await supabaseAdmin!.auth.admin.createUser({
-        email: application.email,
-        password: tempPassword,
-        email_confirm: true, // 이메일 확인 건너뛰기
-        user_metadata: {
-          business_name: application.business_name,
-          business_number: application.business_number,
-          owner_name: application.owner_name,
-          phone: application.phone,
-          role: 'business_owner'
-        }
+      // Edge Function 호출로 승인 처리
+      const { data, error } = await supabase.functions.invoke('approve-business', {
+        body: { applicationId }
       })
 
-      if (authError) {
-        console.error('Auth 계정 생성 실패:', authError)
-        // 이미 존재하는 이메일인 경우 기존 사용자 조회
-        if (authError.message?.includes('already exists')) {
-          const { data: { users }, error: listError } = await supabaseAdmin!.auth.admin.listUsers()
-          if (!listError && users) {
-            const existingUser = users.find(u => u.email === application.email)
-            if (existingUser) {
-              authData = { user: existingUser }
-            } else {
-              throw new Error('기존 사용자를 찾을 수 없습니다')
-            }
-          } else {
-            throw authError
-          }
-        } else {
-          throw authError
-        }
+      if (error) {
+        throw error
       }
 
-      // 3. business_applications 상태를 'approved'로 업데이트
-      const { error: updateError } = await supabase
-        .from('business_applications')
-        .update({
-          status: 'approved',
-          reviewed_at: new Date().toISOString(),
-          // reviewed_by는 현재 로그인한 관리자 ID (추후 구현)
-        })
-        .eq('id', applicationId)
-
-      if (updateError) throw updateError
-
-      // 4. businesses 테이블에 새 비즈니스 생성 (Auth owner_id 사용)
-      const insertData: any = {
-        owner_id: authData.user.id, // Supabase Auth에서 생성된 실제 owner_id 사용
-        business_name: application.business_name,
-        business_number: application.business_number,
-        owner_name: application.owner_name,
-        category: application.category || '기타',
-        address: application.address,
-        phone: application.phone,
-        // email 컬럼 제거 - 스키마 캐시 문제로 임시 제거
-        // email: application.email,
-        verification_status: 'approved',
-        application_id: applicationId,
-        approved_at: new Date().toISOString(),
-        status: 'active'
-      }
+      // 승인 성공
+      const { businessName, tempPassword } = data.data
       
-      // 선택적 필드들
-      if (application.description) {
-        insertData.description = application.description
-      }
-
-      // 선택적 컬럼들은 존재할 때만 추가
-      if (application.display_time_slots) {
-        insertData.display_time_slots = application.display_time_slots
-        insertData.business_hours = application.display_time_slots
-      }
-      
-      // 첨부 서류가 있으면 추가
-      if (application.documents && application.documents.length > 0) {
-        insertData.documents = application.documents
-      }
-
-      console.log('Inserting business data:', insertData)
-      
-      const { error: insertError } = await supabase
-        .from('businesses')
-        .insert(insertData)
-
-      if (insertError) {
-        console.error('Insert error details:', insertError)
-        console.error('Insert error message:', insertError.message)
-        console.error('Insert error code:', insertError.code)
-        
-        // 테이블이 없는 경우 체크
-        if (insertError.code === '42P01') {
-          throw new Error('businesses 테이블이 존재하지 않습니다. create-businesses-table.sql을 먼저 실행해주세요.')
-        }
-        
-        // 컬럼이 없는 경우 체크
-        if (insertError.code === '42703') {
-          throw new Error(`누락된 컬럼이 있습니다: ${insertError.message}. create-businesses-table.sql을 실행해주세요.`)
-        }
-        
-        // businesses 테이블 삽입 실패 시 Auth 계정 삭제 (롤백)
-        await supabaseAdmin!.auth.admin.deleteUser(authData.user.id)
-        throw new Error(`비즈니스 생성 실패: ${insertError.message}`)
-      }
-
-      // 5. 임시 비밀번호 SMS 발송
-      
-      console.log(`매장 승인: ${application.business_name}`)
-      console.log(`사업자등록번호: ${application.business_number}`)
-      console.log(`SMS 발송: ${application.phone}`)
+      console.log(`매장 승인 완료: ${businessName}`)
       console.log(`임시 비밀번호: ${tempPassword}`)
       
-      // SMS 전송
-      try {
-        const smsResult = await smsService.sendApprovalSms(application, tempPassword)
-        if (smsResult.success) {
-          alert(`✅ 승인 완료!\n\n매장: ${application.business_name}\n사업자번호: ${application.business_number}\n임시 비밀번호: ${tempPassword}\n\n📱 SMS 전송 완료: ${application.phone}`)
-        } else {
-          alert(`✅ 승인 완료!\n\n매장: ${application.business_name}\n사업자번호: ${application.business_number}\n임시 비밀번호: ${tempPassword}\n\n⚠️ SMS 전송 실패: ${smsResult.error}`)
-        }
-      } catch (smsError) {
-        console.error('SMS 전송 중 오류:', smsError)
-        alert(`✅ 승인 완료!\n\n매장: ${application.business_name}\n사업자번호: ${application.business_number}\n임시 비밀번호: ${tempPassword}\n\n⚠️ SMS 전송 중 오류 발생`)
-      }
+      // SMS 알림 (Edge Function에서 처리됨)
+      alert(`✅ 승인 완료!\n\n매장: ${businessName}\n임시 비밀번호: ${tempPassword}\n\n📱 SMS가 발송되었습니다: ${application.phone}`)
       
       // 목록 새로고침
       fetchPendingApplications()

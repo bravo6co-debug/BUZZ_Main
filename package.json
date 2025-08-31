@@ -6,13 +6,21 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:e2e": "playwright test e2e/referral-api.spec.js",
-    "test:e2e:headed": "playwright test e2e/referral-api.spec.js --headed"
+    "test:e2e:headed": "playwright test e2e/referral-api.spec.js --headed",
+    "supabase": "supabase",
+    "supabase:link": "supabase link --project-ref ssokfehixfpkbgcghkxy",
+    "supabase:status": "supabase status",
+    "supabase:types": "supabase gen types typescript --project-id ssokfehixfpkbgcghkxy > ./types/supabase.ts",
+    "supabase:migration": "supabase migration new",
+    "supabase:push": "supabase db push",
+    "supabase:pull": "supabase db pull"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@playwright/test": "^1.55.0"
+    "@playwright/test": "^1.55.0",
+    "supabase": "^2.39.2"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.56.1",
