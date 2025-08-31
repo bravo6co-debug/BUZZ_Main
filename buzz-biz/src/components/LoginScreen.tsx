@@ -136,8 +136,23 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                 <input
                   type="text"
                   value={businessNumber}
-                  onChange={(e) => setBusinessNumber(e.target.value)}
+                  onChange={(e) => {
+                    // 숫자만 입력 가능하도록 처리
+                    const input = e.target.value.replace(/[^0-9]/g, '');
+                    
+                    // 자동으로 하이픈 추가 (XXX-XX-XXXXX 형식)
+                    let formatted = input;
+                    if (input.length > 3) {
+                      formatted = input.slice(0, 3) + '-' + input.slice(3);
+                    }
+                    if (input.length > 5) {
+                      formatted = input.slice(0, 3) + '-' + input.slice(3, 5) + '-' + input.slice(5, 10);
+                    }
+                    
+                    setBusinessNumber(formatted);
+                  }}
                   placeholder="123-45-67890"
+                  maxLength={12}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
@@ -217,8 +232,23 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                 <input
                   type="text"
                   value={businessNumber}
-                  onChange={(e) => setBusinessNumber(e.target.value)}
+                  onChange={(e) => {
+                    // 숫자만 입력 가능하도록 처리
+                    const input = e.target.value.replace(/[^0-9]/g, '');
+                    
+                    // 자동으로 하이픈 추가 (XXX-XX-XXXXX 형식)
+                    let formatted = input;
+                    if (input.length > 3) {
+                      formatted = input.slice(0, 3) + '-' + input.slice(3);
+                    }
+                    if (input.length > 5) {
+                      formatted = input.slice(0, 3) + '-' + input.slice(3, 5) + '-' + input.slice(5, 10);
+                    }
+                    
+                    setBusinessNumber(formatted);
+                  }}
                   placeholder="123-45-67890"
+                  maxLength={12}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />

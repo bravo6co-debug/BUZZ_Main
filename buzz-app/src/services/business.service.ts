@@ -31,6 +31,27 @@ export interface BusinessCategory {
 }
 
 class BusinessService {
+  // Map database fields to frontend fields
+  private mapBusinessData(business: any): Business {
+    return {
+      ...business,
+      name: business.business_name || business.name,
+      // Ensure other fields are mapped correctly
+      id: business.id,
+      category: business.category,
+      description: business.description,
+      address: business.address,
+      phone: business.phone,
+      image_url: business.image_url,
+      rating: business.rating,
+      review_count: business.review_count,
+      is_featured: business.is_featured,
+      status: business.status || 'active',
+      display_time_slots: business.display_time_slots,
+      created_at: business.created_at,
+      updated_at: business.updated_at
+    };
+  }
   // 비즈니스 목록 조회
   async getBusinesses(filters?: {
     category?: string;
@@ -50,7 +71,7 @@ class BusinessService {
       }
 
       if (filters?.search) {
-        query = query.ilike('name', `%${filters.search}%`);
+        query = query.ilike('business_name', `%${filters.search}%`);
       }
 
       if (filters?.is_featured !== undefined) {
@@ -71,7 +92,7 @@ class BusinessService {
 
       return {
         success: true,
-        data,
+        data: data ? data.map(b => this.mapBusinessData(b)) : [],
         count,
         error: null
       };
@@ -114,7 +135,7 @@ class BusinessService {
 
       // 검색 필터
       if (search) {
-        query = query.ilike('name', `%${search}%`);
+        query = query.ilike('business_name', `%${search}%`);
       }
 
       // 시간대 필터링 (JSONB 쿼리)
@@ -133,7 +154,7 @@ class BusinessService {
 
       return {
         success: true,
-        data: data || [],
+        data: data ? data.map(b => this.mapBusinessData(b)) : [],
         total: count || 0,
         hasMore: (count || 0) > offset + limit,
         error: null
@@ -157,16 +178,14 @@ class BusinessService {
         .from('businesses')
         .select('*')
         .eq('status', 'active')
-        .not('rating', 'is', null)
-        .order('rating', { ascending: false })
-        .order('review_count', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(limit);
 
       if (error) throw error;
 
       return {
         success: true,
-        data: data || [],
+        data: data ? data.map(b => this.mapBusinessData(b)) : [],
         error: null
       };
     } catch (error: any) {
@@ -417,7 +436,7 @@ class BusinessService {
       }
 
       if (filters?.search) {
-        query = query.ilike('name', `%${filters.search}%`);
+        query = query.ilike('business_name', `%${filters.search}%`);
       }
 
       if (filters?.is_featured !== undefined) {

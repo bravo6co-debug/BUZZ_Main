@@ -31,12 +31,28 @@ export const signInBusiness = async (emailOrBusinessNumber: string, password: st
     const cleanBusinessNumber = emailOrBusinessNumber.replace(/-/g, '');
     
     // business_applications 테이블에서 승인된 비즈니스의 이메일 찾기
-    const { data: application } = await supabase
+    // 먼저 하이픈 포함된 형태로 시도
+    let application = null;
+    const { data: appWithHyphen } = await supabase
       .from('business_applications')
       .select('email')
-      .eq('business_number', cleanBusinessNumber)
+      .eq('business_number', emailOrBusinessNumber)
       .eq('status', 'approved')
-      .single()
+      .maybeSingle()
+    
+    if (appWithHyphen) {
+      application = appWithHyphen;
+    } else {
+      // 하이픈 제거한 형태로 재시도
+      const { data: appWithoutHyphen } = await supabase
+        .from('business_applications')
+        .select('email')
+        .eq('business_number', cleanBusinessNumber)
+        .eq('status', 'approved')
+        .maybeSingle()
+      
+      application = appWithoutHyphen;
+    }
     
     if (application?.email) {
       email = application.email;
@@ -52,12 +68,13 @@ export const signInBusiness = async (emailOrBusinessNumber: string, password: st
   })
   
   if (data?.user) {
-    // Check if user has business account
+    // Check if user has business account (여러 매장 중 첫 번째 선택)
     const { data: business, error: bizError } = await supabase
       .from('businesses')
       .select('*')
       .eq('owner_id', data.user.id) // owner_id 사용
-      .single()
+      .limit(1)
+      .maybeSingle()
     
     if (bizError || !business) {
       // businesses 테이블에 없으면 business_applications에서 확인
@@ -65,7 +82,7 @@ export const signInBusiness = async (emailOrBusinessNumber: string, password: st
         .from('business_applications')
         .select('*')
         .eq('email', data.user.email)
-        .single()
+        .maybeSingle()
       
       if (pendingApp) {
         // 승인 대기 중이거나 데이터 동기화 문제
@@ -121,7 +138,8 @@ export const getCurrentBusiness = async () => {
       .from('businesses')
       .select('*')
       .eq('owner_id', user.id)
-      .single()
+      .limit(1)
+      .maybeSingle()
     
     return { user, business, error: bizError }
   }

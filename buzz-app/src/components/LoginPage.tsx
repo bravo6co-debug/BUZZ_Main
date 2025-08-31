@@ -83,22 +83,35 @@ export default function LoginPage({ onLogin, onClose, showCloseButton = false, r
         console.log('Signing up with referral code:', referralCode);
       }
       
-      const { data, error } = await signUp(email, password, metadata);
+      const { data, error, session } = await signUp(email, password, metadata);
       
       if (error) {
         toast.error(error.message || "회원가입에 실패했습니다");
         console.error("Signup error:", error);
       } else if (data?.user) {
-        // Set email confirmation pending state
-        setEmailConfirmationPending(true);
-        setPendingEmail(email);
-        
-        // Clear stored referral code after successful signup
-        if (referralCode) {
-          localStorage.removeItem('referralCode');
-          toast.success("리퍼럴 가입 성공! 이메일을 확인하여 계정을 활성화해주세요.");
+        // Check if session was created (email confirmation is OFF)
+        if (session) {
+          // Clear stored referral code after successful signup
+          if (referralCode) {
+            localStorage.removeItem('referralCode');
+            toast.success("리퍼럴 가입 및 로그인 성공!");
+          } else {
+            toast.success("회원가입 및 로그인 성공!");
+          }
+          // Auto-login the user
+          onLogin();
         } else {
-          toast.success("회원가입 성공! 이메일을 확인하여 계정을 활성화해주세요.");
+          // Email confirmation is required (email confirmation is ON)
+          setEmailConfirmationPending(true);
+          setPendingEmail(email);
+          
+          // Clear stored referral code after successful signup
+          if (referralCode) {
+            localStorage.removeItem('referralCode');
+            toast.success("리퍼럴 가입 성공! 이메일을 확인하여 계정을 활성화해주세요.");
+          } else {
+            toast.success("회원가입 성공! 이메일을 확인하여 계정을 활성화해주세요.");
+          }
         }
       }
     } catch (error) {

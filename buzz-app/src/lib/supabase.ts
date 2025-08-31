@@ -35,10 +35,58 @@ export const signUp = async (email: string, password: string, metadata?: any) =>
     email,
     password,
     options: {
-      data: metadata
+      data: metadata,
+      emailRedirectTo: `${window.location.origin}/auth/callback`
     }
   })
-  return { data, error }
+  
+  // 회원가입 성공 시 세션 확인
+  let session = null
+  if (data?.user && !error) {
+    console.log('회원가입 성공')
+    
+    // 세션 확인 (이메일 확인이 꺼져있으면 세션이 자동으로 생성됨)
+    const { data: { session: currentSession } } = await supabase.auth.getSession()
+    session = currentSession
+    
+    if (session) {
+      console.log('✅ 세션 자동 생성됨 (이메일 확인 OFF)')
+    } else {
+      console.log('📧 이메일 확인 필요 (이메일 확인 ON)')
+    }
+    
+    // 잠시 대기 (트리거 실행 시간)
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // public.users 테이블 확인
+    const { data: publicUser, error: publicError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', data.user.id)
+      .single()
+    
+    if (publicUser) {
+      console.log('✅ Public user 생성 확인:', publicUser)
+    } else {
+      console.warn('⚠️ Public user가 아직 생성되지 않음:', publicError)
+    }
+    
+    // public.user_profiles 테이블 확인
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', data.user.id)
+      .single()
+    
+    if (profile) {
+      console.log('✅ User profile 생성 확인:', profile)
+      console.log('🎉 리퍼럴 코드:', profile.referral_code)
+    } else {
+      console.warn('⚠️ User profile이 아직 생성되지 않음:', profileError)
+    }
+  }
+  
+  return { data, error, session }
 }
 
 export const signOut = async () => {
