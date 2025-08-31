@@ -90,24 +90,51 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     setLoading(true);
 
     try {
-      const signupData = {
-        businessNumber,
-        phoneNumber,
-        businessName,
-        ownerName,
-      };
+      // Supabase에 직접 business_applications 테이블에 저장
+      const { supabase } = await import('../lib/supabase');
       
-      const response = await authApi.signup(signupData);
-      if (response.success) {
+      // 사업자번호에서 하이픈 제거
+      const cleanBusinessNumber = businessNumber.replace(/-/g, '');
+      const email = `${cleanBusinessNumber}@buzz.biz`;
+      
+      // business_applications 테이블에 신청 정보 저장
+      const { data, error } = await supabase
+        .from('business_applications')
+        .insert({
+          business_number: businessNumber,
+          business_name: businessName,
+          owner_name: ownerName,
+          phone: phoneNumber,
+          email: email,
+          category: '미지정',
+          address: '',
+          status: 'pending',
+          applied_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Application error:', error);
+        
+        // 중복 신청 체크
+        if (error.code === '23505') {
+          setError('이미 가입 신청된 사업자번호입니다.');
+        } else {
+          setError('가입 신청 중 오류가 발생했습니다. 다시 시도해주세요.');
+        }
+      } else {
+        console.log('Application submitted:', data);
         setShowSignup(false);
-        setError('가입 신청이 완료되었습니다. 관리자 승인 후 로그인 가능합니다.');
+        setBusinessNumber('');
+        setBusinessName('');
+        setOwnerName('');
+        setPhoneNumber('');
+        setError('✅ 가입 신청이 완료되었습니다. 승인 후 SMS로 로그인 정보를 보내드립니다.');
       }
     } catch (err: any) {
       console.error('Signup error:', err);
-      
-      // Mock signup - 임시로 신청 완료 메시지 표시
-      setShowSignup(false);
-      setError('가입 신청이 완료되었습니다. 관리자 승인 후 SMS로 비밀번호를 안내드립니다.');
+      setError('가입 신청 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
