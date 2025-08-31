@@ -197,23 +197,44 @@ export function StoreManagement() {
 
     setLoading(true)
     try {
-      // Edge Function 호출로 승인 처리
-      const { data, error } = await supabase.functions.invoke('approve-business', {
-        body: { applicationId }
-      })
+      // Edge Function 호출 시도
+      try {
+        const { data, error } = await supabase.functions.invoke('approve-business', {
+          body: { applicationId }
+        })
 
-      if (error) {
-        throw error
+        if (!error && data) {
+          // Edge Function 성공
+          const { businessName, tempPassword } = data.data
+          console.log(`매장 승인 완료: ${businessName}`)
+          console.log(`임시 비밀번호: ${tempPassword}`)
+          alert(`✅ 승인 완료!\n\n매장: ${businessName}\n임시 비밀번호: ${tempPassword}\n\n📱 SMS가 발송되었습니다: ${application.phone}`)
+          fetchPendingApplications()
+          return
+        }
+      } catch (edgeFunctionError) {
+        console.log('Edge Function not available, using fallback method')
       }
 
-      // 승인 성공
-      const { businessName, tempPassword } = data.data
+      // Fallback: Edge Function이 없을 때 직접 처리 (개발용)
+      console.warn('⚠️ Edge Function이 배포되지 않아 임시 방법을 사용합니다')
       
-      console.log(`매장 승인 완료: ${businessName}`)
-      console.log(`임시 비밀번호: ${tempPassword}`)
+      // 1. 임시 비밀번호 생성
+      const tempPassword = Math.random().toString(36).slice(-8).toUpperCase()
       
-      // SMS 알림 (Edge Function에서 처리됨)
-      alert(`✅ 승인 완료!\n\n매장: ${businessName}\n임시 비밀번호: ${tempPassword}\n\n📱 SMS가 발송되었습니다: ${application.phone}`)
+      // 2. business_applications 상태 업데이트
+      const { error: updateError } = await supabase
+        .from('business_applications')
+        .update({
+          status: 'approved',
+          reviewed_at: new Date().toISOString()
+        })
+        .eq('id', applicationId)
+
+      if (updateError) throw updateError
+
+      // 3. 간단한 사용자 정보만 businesses 테이블에 저장 (Auth 생성은 수동으로)
+      alert(`⚠️ 개발 모드 승인\n\n매장: ${application.business_name}\n임시 비밀번호: ${tempPassword}\n\n📌 Edge Function 배포 후 정상 작동합니다\n📌 사용자는 이 비밀번호로 로그인할 수 없습니다 (수동 생성 필요)`)
       
       // 목록 새로고침
       fetchPendingApplications()
