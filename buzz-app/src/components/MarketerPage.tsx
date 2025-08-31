@@ -166,10 +166,10 @@ export default function MarketerPage() {
 
       {/* Referral System Button */}
       <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg p-4 mb-6 text-white">
-        <h2 className="flex items-center gap-2 mb-2">
+        <h2 className="flex items-center gap-2 mb-2 text-blue-600">
           🚀 리퍼럴 시스템
         </h2>
-        <p className="text-sm mb-3 opacity-90">친구를 초대하고 보상을 받으세요!</p>
+        <p className="text-sm mb-3 text-blue-600">친구를 초대하고 보상을 받으세요!</p>
         <Button 
           variant="secondary"
           className="w-full"

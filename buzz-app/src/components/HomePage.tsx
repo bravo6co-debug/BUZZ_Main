@@ -38,7 +38,7 @@ export default function HomePage() {
   const [recommendedStores, setRecommendedStores] = useState<BusinessWithTimeSlots[]>([]);
   const [popularStores, setPopularStores] = useState<BusinessWithTimeSlots[]>([]);
   const [currentTimeSlot, setCurrentTimeSlot] = useState<string | null>(null);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('all');
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
   const [timeMessage, setTimeMessage] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("전체");
@@ -98,8 +98,9 @@ export default function HomePage() {
     const updateTimeBasedDisplay = () => {
       const slot = timeBasedDisplayService.getCurrentTimeSlot();
       setCurrentTimeSlot(slot);
-      if (!selectedTimeSlot) {
-        setSelectedTimeSlot(slot); // 처음에는 현재 시간대로 설정
+      // 초기 로드시 또는 선택된 시간대가 없으면 현재 시간대로 설정
+      if (!selectedTimeSlot || selectedTimeSlot === '') {
+        setSelectedTimeSlot(slot);
       }
       setTimeMessage(timeBasedDisplayService.getCurrentTimeMessage());
     };
@@ -165,16 +166,12 @@ export default function HomePage() {
         // 선택된 시간대로 필터링 (없으면 현재 시간대)
         const targetSlot = selectedTimeSlot || timeBasedDisplayService.getCurrentTimeSlot();
         if (targetSlot) {
-          const timeFilteredStores = targetSlot === 'all' 
-            ? filteredStores
-            : timeBasedDisplayService.filterByTimeSlot(filteredStores, targetSlot as any);
+          const timeFilteredStores = timeBasedDisplayService.filterByTimeSlot(filteredStores, targetSlot as any);
           const fairStores = timeBasedDisplayService.shuffleForFairness(timeFilteredStores);
           setStores(fairStores);
           
           // 추천 매장 설정
-          const recommendations = targetSlot === 'all'
-            ? timeBasedDisplayService.shuffleForFairness(filteredStores).slice(0, 3)
-            : timeBasedDisplayService.getTimeBasedRecommendations(filteredStores, 3);
+          const recommendations = timeBasedDisplayService.getTimeBasedRecommendations(filteredStores, 3);
           setRecommendedStores(recommendations);
         }
       } else {
@@ -203,9 +200,7 @@ export default function HomePage() {
           // 선택된 시간대로 필터링
           const targetSlot = selectedTimeSlot || timeBasedDisplayService.getCurrentTimeSlot();
           if (targetSlot) {
-            const timeFilteredStores = targetSlot === 'all'
-              ? storesWithTimeSlots
-              : timeBasedDisplayService.filterByTimeSlot(storesWithTimeSlots, targetSlot as any);
+            const timeFilteredStores = timeBasedDisplayService.filterByTimeSlot(storesWithTimeSlots, targetSlot as any);
             const fairStores = timeBasedDisplayService.shuffleForFairness(timeFilteredStores);
             setStores(fairStores);
             setRecommendedStores(timeBasedDisplayService.getTimeBasedRecommendations(storesWithTimeSlots, 3));
@@ -269,9 +264,7 @@ export default function HomePage() {
       
       const targetSlot = selectedTimeSlot || timeBasedDisplayService.getCurrentTimeSlot();
       if (targetSlot) {
-        const timeFilteredStores = targetSlot === 'all'
-          ? defaultStores
-          : timeBasedDisplayService.filterByTimeSlot(defaultStores, targetSlot as any);
+        const timeFilteredStores = timeBasedDisplayService.filterByTimeSlot(defaultStores, targetSlot as any);
         const fairStores = timeBasedDisplayService.shuffleForFairness(timeFilteredStores);
         setStores(fairStores);
         setRecommendedStores(timeBasedDisplayService.getTimeBasedRecommendations(defaultStores, 3));
@@ -281,7 +274,7 @@ export default function HomePage() {
     }
   };
 
-  const categories = ["전체", "카페", "음식점", "기타"];
+  const categories = ["전체", "카페", "음식점", "술집", "기타"];
 
   // 로그인 필요한 기능 체크
   const requireAuth = (action: () => void, message: string = "이 기능을 사용하려면 로그인이 필요합니다") => {
@@ -313,7 +306,7 @@ export default function HomePage() {
         offset: 0,
         category: selectedCategory !== '전체' ? selectedCategory : undefined,
         search: searchQuery || undefined,
-        timeSlot: selectedTimeSlot === 'all' ? undefined : selectedTimeSlot as any
+        timeSlot: selectedTimeSlot ? selectedTimeSlot as any : undefined
       });
       
       if (result.success) {
@@ -386,7 +379,7 @@ export default function HomePage() {
       const result = await businessService.getAllBusinessesWithPagination({
         limit: 3,
         offset: 0,
-        timeSlot: selectedTimeSlot !== 'all' ? selectedTimeSlot as any : undefined
+        timeSlot: selectedTimeSlot ? selectedTimeSlot as any : undefined
       });
       
       if (result.success && result.data) {
@@ -409,7 +402,7 @@ export default function HomePage() {
         offset,
         category: selectedCategory !== '전체' ? selectedCategory : undefined,
         search: searchQuery || undefined,
-        timeSlot: selectedTimeSlot === 'all' ? undefined : selectedTimeSlot as any
+        timeSlot: selectedTimeSlot ? selectedTimeSlot as any : undefined
       });
       
       if (result.success) {
@@ -499,7 +492,13 @@ export default function HomePage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
-          <h1 className="text-xl">🏠 홈</h1>
+          <h1 className="text-2xl font-bold" style={{
+            background: 'linear-gradient(to right, #f97316, #f59e0b)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}>BUZZ</h1>
+          <span className="text-sm text-gray-500">로컬 라이프</span>
         </div>
         <div className="flex gap-2">
           {isLoggedIn && (
@@ -618,28 +617,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Real-time Event Banner with Time Message */}
-      <Card className="mb-6 border-orange-200 bg-orange-50">
-        <CardContent className="p-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Clock className="text-orange-500" size={20} />
-              <div>
-                <p className="text-sm font-medium text-orange-900">{timeMessage}</p>
-                <p className="text-xs text-orange-700">
-                  {currentTimeSlot ? 
-                    `${timeBasedDisplayService.getTimeSlotName(currentTimeSlot as any)} 시간대 추천 매장을 확인하세요` : 
-                    '24시간 운영 매장을 확인하세요'}
-                </p>
-              </div>
-            </div>
-            <Button size="sm" variant="outline" className="text-orange-700 border-orange-300">
-              보기
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Time Slot Selector and Recommendations */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
@@ -649,18 +626,10 @@ export default function HomePage() {
           </h2>
           <div className="flex gap-1">
             <Button
-              variant={selectedTimeSlot === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedTimeSlot('all')}
-              className="text-xs px-2 py-1"
-            >
-              전체
-            </Button>
-            <Button
               variant={selectedTimeSlot === 'morning' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setSelectedTimeSlot('morning')}
-              className={`text-xs px-2 py-1 ${currentTimeSlot === 'morning' ? 'ring-2 ring-blue-400' : ''}`}
+              className={`text-xs px-2 py-1 ${currentTimeSlot === 'morning' ? 'ring-2 ring-orange-400' : ''}`}
             >
               아침
             </Button>
@@ -668,7 +637,7 @@ export default function HomePage() {
               variant={selectedTimeSlot === 'lunch' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setSelectedTimeSlot('lunch')}
-              className={`text-xs px-2 py-1 ${currentTimeSlot === 'lunch' ? 'ring-2 ring-blue-400' : ''}`}
+              className={`text-xs px-2 py-1 ${currentTimeSlot === 'lunch' ? 'ring-2 ring-orange-400' : ''}`}
             >
               점심
             </Button>
@@ -676,7 +645,7 @@ export default function HomePage() {
               variant={selectedTimeSlot === 'dinner' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setSelectedTimeSlot('dinner')}
-              className={`text-xs px-2 py-1 ${currentTimeSlot === 'dinner' ? 'ring-2 ring-blue-400' : ''}`}
+              className={`text-xs px-2 py-1 ${currentTimeSlot === 'dinner' ? 'ring-2 ring-orange-400' : ''}`}
             >
               저녁
             </Button>
@@ -684,7 +653,7 @@ export default function HomePage() {
               variant={selectedTimeSlot === 'night' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setSelectedTimeSlot('night')}
-              className={`text-xs px-2 py-1 ${currentTimeSlot === 'night' ? 'ring-2 ring-blue-400' : ''}`}
+              className={`text-xs px-2 py-1 ${currentTimeSlot === 'night' ? 'ring-2 ring-orange-400' : ''}`}
             >
               밤
             </Button>
@@ -692,10 +661,10 @@ export default function HomePage() {
         </div>
         
         {/* Show selected time slot info */}
-        {selectedTimeSlot && selectedTimeSlot !== 'all' && (
+        {selectedTimeSlot && (
           <div className="text-sm text-gray-600 mb-3">
             {selectedTimeSlot === currentTimeSlot ? (
-              <span className="text-blue-600 font-medium">🔵 현재 시간대</span>
+              <span className="text-orange-600 font-medium">🟠 현재 시간대</span>
             ) : (
               <span>{timeBasedDisplayService.getTimeSlotName(selectedTimeSlot as any)} 시간대 매장</span>
             )}
@@ -725,7 +694,7 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="text-center py-4 text-gray-500 text-sm">
-            {selectedTimeSlot && selectedTimeSlot !== 'all' 
+            {selectedTimeSlot 
               ? `${timeBasedDisplayService.getTimeSlotName(selectedTimeSlot as any)} 시간대에 운영하는 매장이 없습니다`
               : '추천 매장이 없습니다'}
           </div>
