@@ -263,7 +263,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             <div className="mt-4 text-center">
               <button
                 onClick={() => setShowPasswordReset(true)}
-                className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+                className="text-sm text-purple-600 hover:text-purple-700 hover:underline inline-flex items-center gap-1 font-medium transition-colors"
               >
                 <KeyRound className="w-4 h-4" />
                 비밀번호를 잊으셨나요?
@@ -498,7 +498,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                   }}
                   placeholder="123-45-67890"
                   maxLength={12}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   required
                 />
               </div>
@@ -533,7 +533,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="flex-1 bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-md hover:shadow-lg"
                 >
                   {loading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
